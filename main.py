@@ -17,35 +17,35 @@ Reference:
 """
 
 
-from transformers import PegasusForConditionalGeneration, PegasusTokenizer, Trainer, TrainingArguments
+from transformers import PegasusForConditionalGeneration, PegasusTokenizer, Trainer, TrainingArguments, IntervalStrategy
 import torch
+from transformers.trainer_utils import EvaluationStrategy
 
 from pegasus_dataset import PegasusDataset
+from datasets import load_dataset
 
 
-def prepare_data(model_name,
-                 train_texts, train_labels,
-                 val_texts=None, val_labels=None,
-                 test_texts=None, test_labels=None):
-    """
-    Prepare input data for model fine-tuning
-    """
+def prepare_data(model_name: str,
+                 train_articles, train_summaries,
+                 val_articles=None, val_summaries=None,
+                 test_articles=None, test_summaries=None):
+    # TODO - refactor, cleanup, docs
 
-    # this should be a sentencepiece tokenizer
+    # this should be a sentencepiece tokenizer, right?
     tokenizer = PegasusTokenizer.from_pretrained(model_name)
 
-    prepare_val = False if val_texts is None or val_labels is None else True
-    prepare_test = False if test_texts is None or test_labels is None else True
-
-    def tokenize_data(texts, labels):
-        encodings = tokenizer(texts, truncation=True, padding=True)
-        decodings = tokenizer(labels, truncation=True, padding=True)
-        dataset_tokenized = PegasusDataset(encodings, decodings)
+    def tokenize_data(articles, summaries):
+        article_encodings = tokenizer(articles, truncation=True, padding=True)
+        summary_encodings = tokenizer(summaries, truncation=True, padding=True)
+        dataset_tokenized = PegasusDataset(article_encodings, summary_encodings)
         return dataset_tokenized
 
-    train_dataset = tokenize_data(train_texts, train_labels)
-    val_dataset = tokenize_data(val_texts, val_labels) if prepare_val else None
-    test_dataset = tokenize_data(test_texts, test_labels) if prepare_test else None
+    train_dataset = tokenize_data(train_articles, train_summaries)
+    if val_articles is not None:
+        val_dataset = tokenize_data(val_articles, val_summaries)
+
+    if test_articles is not None:
+        test_dataset = tokenize_data(test_articles, test_summaries)
 
     return train_dataset, val_dataset, test_dataset, tokenizer
 
@@ -58,66 +58,51 @@ def prepare_fine_tuning(model_name, tokenizer, train_dataset, val_dataset=None, 
     torch_device = 'cuda' if torch.cuda.is_available() else 'cpu'
     model = PegasusForConditionalGeneration.from_pretrained(model_name).to(torch_device)
 
+    # TODO - do i really need this for now?
     if freeze_encoder:
         for param in model.model.encoder.parameters():
             param.requires_grad = False
 
-    if val_dataset is not None:
-        training_args = TrainingArguments(
-            output_dir=output_dir,  # output directory
-            num_train_epochs=2000,  # total number of training epochs
-            per_device_train_batch_size=1,  # batch size per device during training, can increase if memory allows
-            per_device_eval_batch_size=1,  # batch size for evaluation, can increase if memory allows
-            save_steps=500,  # number of updates steps before checkpoint saves
-            save_total_limit=5,  # limit the total amount of checkpoints and deletes the older checkpoints
-            evaluation_strategy='steps',  # evaluation strategy to adopt during training
-            eval_steps=100,  # number of update steps before evaluation
-            warmup_steps=500,  # number of warmup steps for learning rate scheduler
-            weight_decay=0.01,  # strength of weight decay
-            logging_dir='./logs',  # directory for storing logs
-            logging_steps=10,
-        )
+    training_args = TrainingArguments(
+        output_dir=output_dir,  # output directory
+        per_device_train_batch_size=1,  # batch size per device during training, can increase if memory allows
+        per_device_eval_batch_size=1,  # batch size for evaluation, can increase if memory allows
+        save_steps=500,  # number of updates steps before checkpoint saves
+        save_total_limit=2,  # limit the total amount of checkpoints and deletes the older checkpoints
+        evaluation_strategy=IntervalStrategy.STEPS,  # evaluation strategy to adopt during training
+        eval_steps=100,  # number of update steps before evaluation
+        # warmup_steps=500,  # number of warmup steps for learning rate scheduler
+        # weight_decay=0.01,  # strength of weight decay
+        logging_dir='./logs',  # directory for storing logs
+        logging_steps=10,
+        #####
+        label_smoothing_factor=0.1,
+        max_steps=170000,
+        per_gpu_train_batch_size=2,  # total batch size = 4
+        gradient_accumulation_steps=64,   # batch_size_orig / batch_size_possible
+        report_to=["wandb"],
+    )
 
-        trainer = Trainer(
-            model=model,  # the instantiated 🤗 Transformers model to be trained
-            args=training_args,  # training arguments, defined above
-            train_dataset=train_dataset,  # training dataset
-            eval_dataset=val_dataset,  # evaluation dataset
-            tokenizer=tokenizer
-        )
-
-    else:
-        training_args = TrainingArguments(
-            output_dir=output_dir,  # output directory
-            num_train_epochs=2000,  # total number of training epochs
-            per_device_train_batch_size=1,  # batch size per device during training, can increase if memory allows
-            save_steps=500,  # number of updates steps before checkpoint saves
-            save_total_limit=5,  # limit the total amount of checkpoints and deletes the older checkpoints
-            warmup_steps=500,  # number of warmup steps for learning rate scheduler
-            weight_decay=0.01,  # strength of weight decay
-            logging_dir='./logs',  # directory for storing logs
-            logging_steps=10,
-        )
-
-        trainer = Trainer(
-            model=model,  # the instantiated 🤗 Transformers model to be trained
-            args=training_args,  # training arguments, defined above
-            train_dataset=train_dataset,  # training dataset
-            tokenizer=tokenizer
-        )
+    trainer = Trainer(
+        model=model,  # the instantiated 🤗 Transformers model to be trained
+        args=training_args,  # training arguments, defined above
+        train_dataset=train_dataset,  # training dataset
+        eval_dataset=val_dataset,  # evaluation dataset
+        tokenizer=tokenizer,
+    )
 
     return trainer
 
 
 if __name__ == '__main__':
     # use XSum dataset as example, with first 1000 docs as training data
-    from datasets import load_dataset
 
-    dataset = load_dataset("xsum")
-    train_texts, train_labels = dataset['train']['document'][:1000], dataset['train']['summary'][:1000]
+    # dataset = load_dataset("xsum")
+    # dataset = load_dataset("")
+    train_documents, train_summaries = dataset['train']['document'][:1000], dataset['train']['summary'][:1000]
 
     # use Pegasus Large model as base for fine-tuning
     model_name = 'google/pegasus-large'
-    train_dataset, _, _, tokenizer = prepare_data(model_name, train_texts, train_labels)
+    train_dataset, _, _, tokenizer = prepare_data(model_name, train_documents, train_summaries)
     trainer = prepare_fine_tuning(model_name, tokenizer, train_dataset)
     trainer.train()
