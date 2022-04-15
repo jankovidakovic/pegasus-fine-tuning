@@ -43,13 +43,13 @@ def main():
     tokenizer = PegasusTokenizer.from_pretrained(model_name)
 
     train_dataset = prepare_dataset(
-        dataset["train"]["articles"],
+        dataset["train"]["article"],
         dataset["train"]["highlights"],
         tokenizer=tokenizer
     )
 
     eval_dataset = prepare_dataset(
-        dataset["validation"]["articles"],
+        dataset["validation"]["article"],
         dataset["validation"]["highlights"],
         tokenizer=tokenizer
     )
