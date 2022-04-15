@@ -36,6 +36,9 @@ def prepare_dataset(articles, summaries, *, tokenizer):
 def main():
 
     # prepare data
+
+
+
     dataset = load_dataset("cnn_dailymail", "3.0.0")  # ["train", "validation", "test"]
 
     model_name = "google/pegasus-large"
@@ -75,8 +78,8 @@ def main():
         #####
         label_smoothing_factor=0.1,
         max_steps=170000,
-        per_gpu_train_batch_size=2,  # total batch size = 4
-        gradient_accumulation_steps=64,   # batch_size_orig / batch_size_possible
+        per_gpu_train_batch_size=1,  # total batch size = 2
+        gradient_accumulation_steps=128,   # batch_size_orig / batch_size_possible
         report_to=["wandb"],
     )
 
