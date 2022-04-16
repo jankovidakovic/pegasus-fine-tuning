@@ -19,11 +19,6 @@ def main():
     tokenizer = PegasusTokenizer.from_pretrained(model_name)
 
 
-    eval_dataset = prepare_dataset(
-        dataset["validation"]["article"],
-        dataset["validation"]["highlights"],
-        tokenizer=tokenizer
-    )
 
     wandb.init(project="pegasus-cnn-fine-tuning", entity="jankovidakovic")
     device = "cuda" if torch.cuda.is_available() else "cpu"

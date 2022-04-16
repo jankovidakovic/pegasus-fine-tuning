@@ -1,5 +1,5 @@
 import torch
-from datasets import Dataset
+from torch.utils.data import Dataset
 from transformers import PegasusForConditionalGeneration, Adafactor
 from transformers.optimization import AdafactorSchedule
 
