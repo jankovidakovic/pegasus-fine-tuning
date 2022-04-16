@@ -6,50 +6,18 @@ from transformers.optimization import Adafactor, AdafactorSchedule
 from datasets import load_metric, load_dataset
 import wandb
 
-from pegasus_dataset import PegasusDataset
-
-
-def prepare_model(*, device: str = "cuda"):
-    model = PegasusForConditionalGeneration.from_pretrained("google/pegasus-large").to(device)
-
-    # replace AdamW with Adafactor
-    optimizer = Adafactor(
-        model.parameters(),
-        # scale_parameter=False,
-        relative_step=True,
-        scale_parameter=False,
-        # warmup_init=True,
-        warmup_init=False,
-    )
-    scheduler = AdafactorSchedule(optimizer, initial_lr=5e-5)
-    return model, optimizer, scheduler
-
-
-def prepare_dataset(articles, summaries, *, tokenizer):
-    article_encodings = tokenizer(articles, truncation=True, padding=True)
-    summary_encodings = tokenizer(summaries, truncation=True, padding=True)
-
-    dataset = PegasusDataset(article_encodings, summary_encodings)
-    return dataset
+from utils import prepare_dataset, prepare_model
 
 
 def main():
 
     # prepare data
-
-
-
     dataset = load_dataset("cnn_dailymail", "3.0.0")  # ["train", "validation", "test"]
 
     model_name = "google/pegasus-large"
 
     tokenizer = PegasusTokenizer.from_pretrained(model_name)
 
-    train_dataset = prepare_dataset(
-        dataset["train"]["article"],
-        dataset["train"]["highlights"],
-        tokenizer=tokenizer
-    )
 
     eval_dataset = prepare_dataset(
         dataset["validation"]["article"],
