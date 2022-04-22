@@ -2,7 +2,8 @@ import wandb
 import torch
 
 from torch.utils.data import Dataset
-from transformers import PegasusForConditionalGeneration, Trainer, TrainingArguments, Adafactor, IntervalStrategy, PegasusTokenizerFast
+from transformers import PegasusForConditionalGeneration, Trainer, TrainingArguments, Adafactor, IntervalStrategy, \
+    PegasusTokenizerFast, PegasusTokenizer
 from transformers.optimization import AdafactorSchedule
 from datasets import load_dataset
 
@@ -28,6 +29,7 @@ def prepare_data(model_name,
     Prepare input data for model fine-tuning
     """
     tokenizer = PegasusTokenizerFast.from_pretrained(model_name)
+    # tokenizer = PegasusTokenizer.from_pretrained(model_name)
 
     prepare_val = False if val_texts is None or val_labels is None else True
 
