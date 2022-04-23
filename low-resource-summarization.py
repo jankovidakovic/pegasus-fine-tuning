@@ -5,7 +5,7 @@ import argparse
 
 from torch.utils.data import Dataset
 from transformers import PegasusForConditionalGeneration, Adafactor, IntervalStrategy, \
-    PegasusTokenizerFast, SchedulerType, Seq2SeqTrainingArguments, Seq2SeqTrainer, DataCollatorForSeq2Seq, \
+    SchedulerType, Seq2SeqTrainingArguments, Seq2SeqTrainer, DataCollatorForSeq2Seq, \
     PegasusTokenizer
 from transformers.optimization import AdafactorSchedule
 from datasets import load_dataset, load_metric
@@ -27,29 +27,35 @@ class PegasusDataset(Dataset):
         return len(self.labels['input_ids'])  # len(self.labels)
 
 
-"""
-        output_dir=output_dir,  # output directory
-        per_device_train_batch_size=1,  # batch size per device during training, can increase if memory allows
-        per_device_eval_batch_size=1,  # batch size for evaluation, can increase if memory allows
-        gradient_accumulation_steps=128,
-        eval_accumulation_steps=128,
-        save_steps=1,
-        save_total_limit=1,  # limit the total amount of checkpoints and deletes the older checkpoint
-        eval_steps=1,
-        logging_dir='./test-logs',  # directory for storing logs
-        logging_steps=1,
-    )
+DEFAULT_TRAINING_ARGUMENTS = {
+    "output_dir": "./results",  # output directory
+    "max_steps": 2000,  # max number of gradient updates
 
-    trainer = Seq2SeqTrainer(
-        model=model,  # the instantiated 🤗 Transformers model to be trained
-        optimizers=(optimizer, scheduler),
-        args=training_args,  # training arguments, defined above
-        train_dataset=train_dataset,  # training dataset
-        eval_dataset=eval_dataset,  # evaluation dataset
-        tokenizer=tokenizer,
-        data_collator=data_collator,
-        compute_metrics=compute_metrics,
-"""
+    "per_device_train_batch_size": 4,  # batch size per device during training, can increase if memory allows
+    "gradient_accumulation_steps": 32,
+    "gradient_checkpointing": False,
+
+    "per_device_eval_batch_size": 16,  # batch size for evaluation, can increase if memory allows
+    "dataloader_num_workers": 0,
+
+    "evaluation_strategy": IntervalStrategy.STEPS,  # evaluation strategy to adopt during training
+    "eval_steps": 100,
+    "predict_with_generate": True,
+    "generation_num_beams": 1,
+
+    "save_steps": 100,
+    "save_total_limit": 3,  # limit the total amount of checkpoints and deletes the older checkpoint
+    "load_best_model_at_end": True,
+    "metric_for_best_model": "rougecomb",
+
+    "logging_dir": './logs',  # directory for storing logs
+    "logging_steps": 10,
+
+    "adafactor": True,
+    "optim": OptimizerNames.ADAFACTOR,
+    "lr_scheduler_type": SchedulerType.CONSTANT,
+    "label_smoothing_factor": 0.1
+}
 
 
 def create_parser():
@@ -74,38 +80,6 @@ def create_parser():
     return parser
 
 
-DEFAULT_TRAINING_ARGUMENTS = {
-    "output_dir": "./results",  # output directory
-    "max_steps": 2000,  # max number of gradient updates
-
-    "per_device_train_batch_size": 1,  # batch size per device during training, can increase if memory allows
-    "gradient_accumulation_steps": 128,
-    "gradient_checkpointing": False,
-
-    "per_device_eval_batch_size": 1,  # batch size for evaluation, can increase if memory allows
-    # "eval_accumulation_steps": 128,
-    "dataloader_num_workers": 64,
-
-    "evaluation_strategy": IntervalStrategy.STEPS,  # evaluation strategy to adopt during training
-    "eval_steps": 100,
-    "predict_with_generate": True,
-    "generation_num_beams": 1,
-
-    "save_steps": 100,
-    "save_total_limit": 3,  # limit the total amount of checkpoints and deletes the older checkpoint
-    "load_best_model_at_end": True,
-    "metric_for_best_model": "rougecomb",
-
-    "logging_dir": './logs',  # directory for storing logs
-    "logging_steps": 10,
-
-    "adafactor": True,
-    "optim": OptimizerNames.ADAFACTOR,
-    "lr_scheduler_type": SchedulerType.CONSTANT,
-    "label_smoothing_factor": 0.1
-}
-
-
 def main():
     parser = create_parser()
     args = parser.parse_args()
@@ -121,7 +95,6 @@ def main():
 
     train_cutoff = cli_config["n_train_examples"]
     train_articles, train_summaries = train_articles[:train_cutoff], train_summaries[:train_cutoff]
-    # eval_articles, eval_summaries = eval_articles[:eval_cutoff], eval_summaries[:eval_cutoff]
 
     model_name = 'google/pegasus-large'
     torch_device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -177,8 +150,6 @@ def main():
     device_count = torch.cuda.device_count()
     final_training_args["gradient_accumulation_steps"] = \
         int(cli_config["total_train_batch_size"] / cli_config["per_device_train_batch_size"] / device_count)
-    # final_training_args["eval_gradient_accumulation_steps"] = \
-    #    cli_config["total_train_batch_size"] / cli_config["per_device_train_batch_size"] / device_count
 
     training_args = Seq2SeqTrainingArguments(**final_training_args)
 
@@ -193,7 +164,6 @@ def main():
         compute_metrics=compute_metrics,
     )
 
-    # return trainer
     trainer.train()
 
 
