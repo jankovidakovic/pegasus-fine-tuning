@@ -64,9 +64,9 @@ def create_parser():
     parser.add_argument("--save_total_limit", type=int)
     parser.add_argument("--eval_steps", type=int)
     parser.add_argument("--logging_dir")
-    parser.add_argument("--logging_steps")
+    parser.add_argument("--logging_steps", type=int)
     parser.add_argument("--wandb_project")
-    parser.add_argument("--max_steps")
+    parser.add_argument("--max_steps", type=int)
 
     return parser
 
