@@ -58,8 +58,9 @@ def create_parser():
     parser.add_argument("--n_eval_examples", type=int)
     parser.add_argument("--per_device_train_batch_size", type=int, required=True)
     parser.add_argument("--per_device_eval_batch_size", type=int, required=True)
-    parser.add_argument("--total_train_batch_size", type=int, default=256, required=False)
-    # parser.add_argument("--total_eval_batch_size", type=int, default=256, required=False)
+    parser.add_argument("--total_train_batch_size", type=int, default=256, required=True)
+    parser.add_argument("--eval_accumulation_steps", type=int, default=256, required=True)
+    parser.add_argument("--gradient_checkpointing", type=bool, action="store_true", required=False, default=False)
     parser.add_argument("--save_steps", type=int)
     parser.add_argument("--save_total_limit", type=int)
     parser.add_argument("--eval_steps", type=int)
@@ -77,10 +78,10 @@ DEFAULT_TRAINING_ARGUMENTS = {
 
     "per_device_train_batch_size": 1,  # batch size per device during training, can increase if memory allows
     "gradient_accumulation_steps": 128,
-    # "gradient_checkpointing": True,
+    "gradient_checkpointing": False,
 
     "per_device_eval_batch_size": 1,  # batch size for evaluation, can increase if memory allows
-    # "eval_accumulation_steps": 128,
+    "eval_accumulation_steps": 128,
 
     "evaluation_strategy": IntervalStrategy.STEPS,  # evaluation strategy to adopt during training
     "eval_steps": 100,
@@ -175,30 +176,6 @@ def main():
         int(cli_config["total_train_batch_size"] / cli_config["per_device_train_batch_size"] / device_count)
     # final_training_args["eval_gradient_accumulation_steps"] = \
     #    cli_config["total_train_batch_size"] / cli_config["per_device_train_batch_size"] / device_count
-
-    # training_args = Seq2SeqTrainingArguments(
-    # output_dir=output_dir,  # output directory
-    # max_steps=2000,
-    # per_device_train_batch_size=1,  # batch size per device during training, can increase if memory allows
-    # per_device_eval_batch_size=1,  # batch size for evaluation, can increase if memory allows
-    # gradient_accumulation_steps=128,
-    # eval_accumulation_steps=128,
-    # # save_steps=1000,  # number of updates steps before checkpoint saves
-    # save_steps=1,
-    # save_total_limit=1,  # limit the total amount of checkpoints and deletes the older checkpoint
-    # load_best_model_at_end=True,
-    # metric_for_best_model="rougecomb",
-    # evaluation_strategy=IntervalStrategy.STEPS,  # evaluation strategy to adopt during training
-    # # eval_steps=10000,  # number of update steps before evaluation
-    # eval_steps=1,
-    # predict_with_generate=True,
-    # logging_dir='./test-logs',  # directory for storing logs
-    # logging_steps=1,
-    # adafactor=True,
-    # # learning_rate=5e-4,
-    # optim=OptimizerNames.ADAFACTOR,
-    # lr_scheduler_type=SchedulerType.CONSTANT
-    # )
 
     training_args = Seq2SeqTrainingArguments(**final_training_args)
 
