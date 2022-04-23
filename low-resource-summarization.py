@@ -59,7 +59,7 @@ def create_parser():
     parser.add_argument("--per_device_train_batch_size", type=int, required=True)
     parser.add_argument("--per_device_eval_batch_size", type=int, required=True)
     parser.add_argument("--total_train_batch_size", type=int, default=256, required=False)
-    parser.add_argument("--total_eval_batch_size", type=int, default=256, required=False)
+    # parser.add_argument("--total_eval_batch_size", type=int, default=256, required=False)
     parser.add_argument("--save_steps", type=int)
     parser.add_argument("--save_total_limit", type=int)
     parser.add_argument("--eval_steps", type=int)
@@ -85,7 +85,7 @@ DEFAULT_TRAINING_ARGUMENTS = {
     "evaluation_strategy": IntervalStrategy.STEPS,  # evaluation strategy to adopt during training
     "eval_steps": 100,
     "predict_with_generate": True,
-    "generation_num_beans": 1,
+    "generation_num_beams": 1,
 
     "save_steps": 100,
     "save_total_limit": 3,  # limit the total amount of checkpoints and deletes the older checkpoint
@@ -173,8 +173,8 @@ def main():
     device_count = torch.cuda.device_count()
     final_training_args["gradient_accumulation_steps"] = \
         cli_config["total_train_batch_size"] / cli_config["per_device_train_batch_size"] / device_count
-    final_training_args["eval_gradient_accumulation_steps"] = \
-        cli_config["total_train_batch_size"] / cli_config["per_device_train_batch_size"] / device_count
+    # final_training_args["eval_gradient_accumulation_steps"] = \
+    #    cli_config["total_train_batch_size"] / cli_config["per_device_train_batch_size"] / device_count
 
     # training_args = Seq2SeqTrainingArguments(
     # output_dir=output_dir,  # output directory
