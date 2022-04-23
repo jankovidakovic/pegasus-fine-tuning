@@ -172,7 +172,7 @@ def main():
 
     device_count = torch.cuda.device_count()
     final_training_args["gradient_accumulation_steps"] = \
-        cli_config["total_train_batch_size"] / cli_config["per_device_train_batch_size"] / device_count
+        int(cli_config["total_train_batch_size"] / cli_config["per_device_train_batch_size"] / device_count)
     # final_training_args["eval_gradient_accumulation_steps"] = \
     #    cli_config["total_train_batch_size"] / cli_config["per_device_train_batch_size"] / device_count
 
