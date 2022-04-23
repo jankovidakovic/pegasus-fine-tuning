@@ -59,7 +59,8 @@ def create_parser():
     parser.add_argument("--per_device_train_batch_size", type=int, required=True)
     parser.add_argument("--per_device_eval_batch_size", type=int, required=True)
     parser.add_argument("--total_train_batch_size", type=int, default=256, required=True)
-    parser.add_argument("--eval_accumulation_steps", type=int, default=256, required=True)
+    parser.add_argument("--eval_accumulation_steps", type=int)
+    parser.add_argument("--dataloader_num_workers", type=int, default=0)
     parser.add_argument("--gradient_checkpointing", action=argparse.BooleanOptionalAction)
     parser.add_argument("--save_steps", type=int)
     parser.add_argument("--save_total_limit", type=int)
@@ -81,7 +82,8 @@ DEFAULT_TRAINING_ARGUMENTS = {
     "gradient_checkpointing": False,
 
     "per_device_eval_batch_size": 1,  # batch size for evaluation, can increase if memory allows
-    "eval_accumulation_steps": 128,
+    # "eval_accumulation_steps": 128,
+    "dataloader_num_workers": 64,
 
     "evaluation_strategy": IntervalStrategy.STEPS,  # evaluation strategy to adopt during training
     "eval_steps": 100,
