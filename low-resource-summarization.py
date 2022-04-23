@@ -63,19 +63,25 @@ def create_parser():
 
     parser.add_argument("--n_train_examples", type=int)
     parser.add_argument("--n_eval_examples", type=int)
+
     parser.add_argument("--per_device_train_batch_size", type=int, required=True)
     parser.add_argument("--per_device_eval_batch_size", type=int, required=True)
     parser.add_argument("--total_train_batch_size", type=int, default=256, required=True)
+
     parser.add_argument("--eval_accumulation_steps", type=int)
     parser.add_argument("--dataloader_num_workers", type=int, default=0)
+
     parser.add_argument("--gradient_checkpointing", action=argparse.BooleanOptionalAction)
+
+    parser.add_argument("--max_steps", type=int)
     parser.add_argument("--save_steps", type=int)
     parser.add_argument("--save_total_limit", type=int)
     parser.add_argument("--eval_steps", type=int)
+
+    parser.add_argument("--output_dir")
     parser.add_argument("--logging_dir")
     parser.add_argument("--logging_steps", type=int)
     parser.add_argument("--wandb_project")
-    parser.add_argument("--max_steps", type=int)
 
     return parser
 
