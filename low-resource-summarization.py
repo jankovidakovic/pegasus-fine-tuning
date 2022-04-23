@@ -5,7 +5,8 @@ import argparse
 
 from torch.utils.data import Dataset
 from transformers import PegasusForConditionalGeneration, Adafactor, IntervalStrategy, \
-    PegasusTokenizerFast, SchedulerType, Seq2SeqTrainingArguments, Seq2SeqTrainer, DataCollatorForSeq2Seq
+    PegasusTokenizerFast, SchedulerType, Seq2SeqTrainingArguments, Seq2SeqTrainer, DataCollatorForSeq2Seq, \
+    PegasusTokenizer
 from transformers.optimization import AdafactorSchedule
 from datasets import load_dataset, load_metric
 from transformers.training_args import OptimizerNames
@@ -126,7 +127,7 @@ def main():
     torch_device = 'cuda' if torch.cuda.is_available() else 'cpu'
 
     # prepare training data
-    tokenizer = PegasusTokenizerFast.from_pretrained(model_name)
+    tokenizer = PegasusTokenizer.from_pretrained(model_name)
 
     def tokenize_data(articles, summaries):
         article_encodings = tokenizer(articles, truncation=True)
