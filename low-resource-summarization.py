@@ -1,9 +1,10 @@
 import nltk
 import wandb
 import torch
+import argparse
 
 from torch.utils.data import Dataset
-from transformers import PegasusForConditionalGeneration, Trainer, TrainingArguments, Adafactor, IntervalStrategy, \
+from transformers import PegasusForConditionalGeneration, Adafactor, IntervalStrategy, \
     PegasusTokenizerFast, SchedulerType, Seq2SeqTrainingArguments, Seq2SeqTrainer, DataCollatorForSeq2Seq
 from transformers.optimization import AdafactorSchedule
 from datasets import load_dataset, load_metric
@@ -11,6 +12,7 @@ from transformers.training_args import OptimizerNames
 
 
 class PegasusDataset(Dataset):
+    # TODO - extract to another file
     def __init__(self, encodings, labels):
         self.encodings = encodings
         self.labels = labels
@@ -40,18 +42,102 @@ def compute_metrics(eval_pred):
 
     # Extract a few results
     result = {key: value.mid.fmeasure * 100 for key, value in result.items()}
+
+    # combine rouge scores for model comparison
     result["rougecomb"] = result["rouge1"] + 2 * result["rouge2"] + result["rougeLsum"]
     return result
 
 
+"""
+        output_dir=output_dir,  # output directory
+        per_device_train_batch_size=1,  # batch size per device during training, can increase if memory allows
+        per_device_eval_batch_size=1,  # batch size for evaluation, can increase if memory allows
+        gradient_accumulation_steps=128,
+        eval_accumulation_steps=128,
+        save_steps=1,
+        save_total_limit=1,  # limit the total amount of checkpoints and deletes the older checkpoint
+        eval_steps=1,
+        logging_dir='./test-logs',  # directory for storing logs
+        logging_steps=1,
+    )
+
+    trainer = Seq2SeqTrainer(
+        model=model,  # the instantiated 🤗 Transformers model to be trained
+        optimizers=(optimizer, scheduler),
+        args=training_args,  # training arguments, defined above
+        train_dataset=train_dataset,  # training dataset
+        eval_dataset=eval_dataset,  # evaluation dataset
+        tokenizer=tokenizer,
+        data_collator=data_collator,
+        compute_metrics=compute_metrics,
+"""
+
+
+def create_parser():
+    parser = argparse.ArgumentParser(description="Low-resource summarization fine-tuning configuration")
+
+    parser.add_argument("--n_train_examples", type=int)
+    parser.add_argument("--n_eval_examples", type=int)
+    parser.add_argument("--per_device_train_batch_size", type=int, required=True)
+    parser.add_argument("--per_device_eval_batch_size", type=int, required=True)
+    parser.add_argument("--total_train_batch_size", type=int, default=256, required=False)
+    parser.add_argument("--total_eval_batch_size", type=int, default=256, required=False)
+    parser.add_argument("--save_steps", type=int)
+    parser.add_argument("--save_total_limit", type=int)
+    parser.add_argument("--eval_steps", type=int)
+    parser.add_argument("--logging_dir")
+    parser.add_argument("--logging_steps")
+    parser.add_argument("--wandb_project")
+    parser.add_argument("--max_steps")
+
+    return parser
+
+
+DEFAULT_TRAINING_ARGUMENTS = {
+    "output_dir": "./results",  # output directory
+    "max_steps": 2000,  # max number of gradient updates
+
+    "per_device_train_batch_size": 1,  # batch size per device during training, can increase if memory allows
+    "gradient_accumulation_steps": 128,
+
+    "per_device_eval_batch_size": 1,  # batch size for evaluation, can increase if memory allows
+    "eval_accumulation_steps": 128,
+
+    "evaluation_strategy": IntervalStrategy.STEPS,  # evaluation strategy to adopt during training
+    "eval_steps": 100,
+    "predict_with_generate": True,
+    "generation_num_beans": 1,
+
+    "save_steps": 100,
+    "save_total_limit": 3,  # limit the total amount of checkpoints and deletes the older checkpoint
+    "load_best_model_at_end": True,
+    "metric_for_best_model": "rougecomb",
+
+    "logging_dir": './logs',  # directory for storing logs
+    "logging_steps": 10,
+
+    "adafactor": True,
+    "optim": OptimizerNames.ADAFACTOR,
+    "lr_scheduler_type": SchedulerType.CONSTANT
+}
+
+
 if __name__ == "__main__":
-    wandb.init(project="pegasus-cnn-fine-tuning", entity="jankovidakovic")
+    parser = create_parser()
+    args = parser.parse_args()
+    config = vars(args)
+
+    wandb.init(project=config["wandb_project"], entity="jankovidakovic")
 
     dataset = load_dataset("cnn_dailymail", "3.0.0")
     metric = load_metric("rouge")
 
-    train_texts, train_labels = dataset['train']['article'][:1000], dataset['train']['highlights'][:1000]
-    val_texts, val_labels = dataset["validation"]["article"], dataset["validation"]["highlights"]
+    train_articles, train_summaries = dataset['train']['article'], dataset['train']['highlights']
+    eval_articles, eval_summaries = dataset["validation"]["article"], dataset["validation"]["highlights"]
+
+    train_cutoff, eval_cutoff = config["n_train_examples"], config["n_eval_examples"]
+    train_articles, train_summaries = train_articles[:train_cutoff], train_summaries[:train_cutoff]
+    eval_articles, eval_summaries = eval_articles[:eval_cutoff], eval_summaries[:eval_cutoff]
 
     model_name = 'google/pegasus-large'
     torch_device = 'cuda' if torch.cuda.is_available() else 'cpu'
@@ -60,16 +146,15 @@ if __name__ == "__main__":
     # prepare training data
     tokenizer = PegasusTokenizerFast.from_pretrained(model_name)
 
-
-    def tokenize_data(texts, labels):
-        encodings = tokenizer(texts, truncation=True)  # removed padding=True
-        decodings = tokenizer(labels, truncation=True)
-        dataset_tokenized = PegasusDataset(encodings, decodings)
+    def tokenize_data(articles, summaries):
+        article_encodings = tokenizer(articles, truncation=True)
+        summary_encodings = tokenizer(summaries, truncation=True)
+        dataset_tokenized = PegasusDataset(article_encodings, summary_encodings)
         return dataset_tokenized
 
 
-    train_dataset = tokenize_data(train_texts, train_labels)
-    eval_dataset = tokenize_data(val_texts, val_labels)
+    train_dataset = tokenize_data(train_articles, train_summaries)
+    eval_dataset = tokenize_data(eval_articles, eval_summaries)
 
     model = PegasusForConditionalGeneration.from_pretrained(model_name).to(torch_device)
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
