@@ -101,6 +101,9 @@ def main():
 
     train_cutoff = cli_config["n_train_examples"]
     train_articles, train_summaries = train_articles[:train_cutoff], train_summaries[:train_cutoff]
+    if "n_eval_examples" in cli_config:
+        eval_cutoff = cli_config["n_eval_examples"]
+        eval_articles, eval_summaries = eval_articles[:eval_cutoff], eval_summaries[:eval_cutoff]
 
     model_name = 'google/pegasus-large'
     torch_device = 'cuda' if torch.cuda.is_available() else 'cpu'
