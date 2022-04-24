@@ -38,6 +38,7 @@ DEFAULT_TRAINING_ARGUMENTS = {
 
     "per_device_eval_batch_size": 16,  # batch size for evaluation, can increase if memory allows
     "dataloader_num_workers": 0,
+    "eval_accumulation_steps": None,
 
     "evaluation_strategy": IntervalStrategy.STEPS,  # evaluation strategy to adopt during training
     "eval_steps": 100,
