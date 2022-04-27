@@ -7,7 +7,7 @@ import argparse
 from torch.utils.data import Dataset
 from transformers import PegasusForConditionalGeneration, Adafactor, IntervalStrategy, \
     SchedulerType, Seq2SeqTrainingArguments, Seq2SeqTrainer, DataCollatorForSeq2Seq, \
-    PegasusTokenizer, PegasusTokenizerFast
+    PegasusTokenizer, PegasusTokenizerFast, EarlyStoppingCallback
 from transformers.optimization import AdafactorSchedule
 from datasets import load_dataset, load_metric
 from transformers.training_args import OptimizerNames
@@ -73,7 +73,9 @@ def create_parser():
     parser.add_argument("--eval_accumulation_steps", type=int)
     parser.add_argument("--dataloader_num_workers", type=int, default=0)
 
-    parser.add_argument("--gradient_checkpointing", action=argparse.BooleanOptionalAction)
+    parser.add_argument("--gradient_checkpointing", action="store_true", default=False)
+    parser.add_argument("--early_stopping", action="store_true", default=False)
+    parser.add_argument("--early_stopping_patience", type=int, default=3, required=False)
 
     parser.add_argument("--max_steps", type=int)
     parser.add_argument("--save_steps", type=int)
@@ -174,6 +176,10 @@ def main():
         data_collator=data_collator,
         compute_metrics=compute_metrics,
     )
+
+    if cli_config["early_stopping"]:
+        early_stopping_patience = cli_config["early_stopping_patience"]
+        trainer.add_callback(EarlyStoppingCallback(early_stopping_patience))
 
     trainer.train()
 
