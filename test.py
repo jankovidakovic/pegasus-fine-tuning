@@ -50,11 +50,7 @@ def main():
     model_path = os.path.join(checkpoint_path, "pytorch_model.bin")
 
     # Load the tokenizer
-    tokenizer = PegasusTokenizerFast.from_pretrained(tokenizer_path, local_files_only=True)
-
-    # Load the tokenizer config
-    config = AutoConfig.from_pretrained(tokenizer_config_path, local_files_only=True)
-    tokenizer.config = config
+    tokenizer = PegasusTokenizerFast.from_pretrained(checkpoint_path, local_files_only=True)
 
     # Load the model
     model = PegasusForConditionalGeneration\
