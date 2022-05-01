@@ -54,7 +54,7 @@ def main():
 
     # Load the model
     model = PegasusForConditionalGeneration\
-        .from_pretrained(model_path, local_files_only=True)\
+        .from_pretrained(checkpoint_path, local_files_only=True)\
         .to(torch_device)
 
     dataset = load_dataset("cnn_dailymail", "3.0.0")
