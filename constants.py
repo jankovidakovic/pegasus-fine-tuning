@@ -1,7 +1,7 @@
 from transformers import IntervalStrategy, SchedulerType
 from transformers.training_args import OptimizerNames
 
-DEFAULT_TRAINING_ARGUMENTS = {
+DEFAULT_TRAINING_ARGS = {
     "output_dir": "./results",  # output directory
     "max_steps": 2000,  # max number of gradient updates
 
