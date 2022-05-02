@@ -52,7 +52,7 @@ def main():
     test_dataset = tokenize_data(test_articles, test_summaries)
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
-    training_args = Seq2SeqTrainingArguments(**config)
+    training_args = get_training_args(config, is_test=True)
 
     trainer = Seq2SeqTrainer(
         model=model,
