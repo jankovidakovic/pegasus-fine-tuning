@@ -1,10 +1,13 @@
+import json
+import os
+
 import nltk
 import numpy as np
 import torch
 from datasets import load_metric, load_dataset
 from transformers import Seq2SeqTrainingArguments
 
-from constants import DEFAULT_TRAINING_ARGS
+from constants import DEFAULT_TRAINING_ARGS, RESULTS_TEMPLATE
 from pegasus_dataset import PegasusDataset
 
 
@@ -75,3 +78,26 @@ def get_training_args(config, is_test: bool = False):
         int(config["total_train_batch_size"] / config["per_device_train_batch_size"] / device_count)
     training_args = Seq2SeqTrainingArguments(**training_args_config)
     return training_args
+
+
+def load_results(path_to_metrics: str):
+    suffixes = [0, 10, 100, 1000, 10000]
+
+    results = RESULTS_TEMPLATE.copy()
+
+    for suffix in suffixes:
+        path_template = f"metrics-{suffix}.json"
+        path = os.path.join(path_to_metrics, path_template)
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                metrics = json.load(f)
+                results["rouge1"][suffix] = metrics["rouge1"]
+                results["rouge2"][suffix] = metrics["rouge2"]
+                results["rougeL"][suffix] = metrics["rougeLsum"]
+
+    return results
+
+
+if __name__ == '__main__':
+    results = load_results("test-metrics")
+    print(results)
