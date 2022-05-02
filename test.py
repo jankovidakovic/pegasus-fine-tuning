@@ -12,6 +12,7 @@ from utils import get_tokenization_function, get_data, get_training_args, get_me
 def create_parser():
     parser = argparse.ArgumentParser()
     parser.add_argument("--checkpoint_path", type=str, default="path/to/checkpoint")
+    parser.add_argument("--zero_shot", action="store_true")
     parser.add_argument("--per_device_eval_batch_size", type=int, default=2, required=True)
     parser.add_argument("--eval_accumulation_steps", type=int, default=16)
 
@@ -24,12 +25,24 @@ def main():
     args = parser.parse_args()
     config = vars(args)
 
-    checkpoint_path = config["checkpoint_path"]
+    if config.get("zero_shot", False):
+        checkpoint_path = config["checkpoint_path"]
+        model_args = {
+            "pretrained_model_name_or_path": checkpoint_path,
+            "local_files_only": True
+        }
+        save_path = checkpoint_path
+    else:
+        model_args = {
+            "pretrained_model_name_or_path": "google/pegasus-large"
+        }
+        save_path = "./zero_shot"
 
-    tokenizer = PegasusTokenizerFast.from_pretrained(checkpoint_path, local_files_only=True)
+    # tokenizer = PegasusTokenizerFast.from_pretrained(checkpoint_path, local_files_only=True)
+    tokenizer = PegasusTokenizerFast.from_pretrained(**model_args)
 
     model = PegasusForConditionalGeneration\
-        .from_pretrained(checkpoint_path, local_files_only=True) \
+        .from_pretrained(**model_args) \
         .to(torch_device)
 
     _, _, _, _, test_articles, test_summaries = get_data(config)
@@ -53,7 +66,7 @@ def main():
         num_beams=1
     )
 
-    with open(os.path.join(checkpoint_path, "metrics.json"), "w") as f:
+    with open(os.path.join(save_path, "metrics.json"), "w") as f:
         json.dump(metrics, f)
 
 
