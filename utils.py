@@ -64,8 +64,11 @@ def get_data(config):
     return train_articles, train_summaries, eval_articles, eval_summaries, test_articles, test_summaries
 
 
-def get_training_args(config):
+def get_training_args(config, is_test):
     training_args_config = {k: config.get(k, v) for k, v in DEFAULT_TRAINING_ARGS.items()}
+
+    if is_test:
+        return Seq2SeqTrainingArguments(**training_args_config)
 
     device_count = torch.cuda.device_count()
     training_args_config["gradient_accumulation_steps"] = \

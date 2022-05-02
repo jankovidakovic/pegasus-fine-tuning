@@ -4,7 +4,7 @@ import os.path
 
 import torch
 from transformers import PegasusTokenizerFast, PegasusForConditionalGeneration, DataCollatorForSeq2Seq, \
-    Seq2SeqTrainer
+    Seq2SeqTrainer, Seq2SeqTrainingArguments
 
 from utils import get_tokenization_function, get_data, get_training_args, get_metric_function
 
@@ -52,7 +52,7 @@ def main():
     test_dataset = tokenize_data(test_articles, test_summaries)
     data_collator = DataCollatorForSeq2Seq(tokenizer, model=model)
 
-    training_args = get_training_args(config)
+    training_args = Seq2SeqTrainingArguments(**config)
 
     trainer = Seq2SeqTrainer(
         model=model,
