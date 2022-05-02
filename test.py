@@ -26,6 +26,11 @@ def main():
     config = vars(args)
 
     if config.get("zero_shot", False):
+        model_args = {
+            "pretrained_model_name_or_path": "google/pegasus-large"
+        }
+        save_path = "./zero_shot"
+    elif config["checkpoint_path"] is not None:
         checkpoint_path = config["checkpoint_path"]
         model_args = {
             "pretrained_model_name_or_path": checkpoint_path,
@@ -33,10 +38,7 @@ def main():
         }
         save_path = checkpoint_path
     else:
-        model_args = {
-            "pretrained_model_name_or_path": "google/pegasus-large"
-        }
-        save_path = "./zero_shot"
+        raise RuntimeError("Invalid run configuration.")
 
     # tokenizer = PegasusTokenizerFast.from_pretrained(checkpoint_path, local_files_only=True)
     tokenizer = PegasusTokenizerFast.from_pretrained(**model_args)
