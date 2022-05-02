@@ -11,7 +11,7 @@ from utils import get_tokenization_function, get_data, get_training_args, get_me
 
 def create_parser():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--checkpoint_path", type=str, default="path/to/checkpoint")
+    parser.add_argument("--checkpoint_path", type=str)
     parser.add_argument("--zero_shot", action="store_true")
     parser.add_argument("--per_device_eval_batch_size", type=int, default=2, required=True)
     parser.add_argument("--eval_accumulation_steps", type=int, default=16)
