@@ -91,9 +91,9 @@ def load_results(path_to_metrics: str):
         if os.path.exists(path):
             with open(path, "r") as f:
                 metrics = json.load(f)
-                results["rouge1"][suffix] = metrics["rouge1"]
-                results["rouge2"][suffix] = metrics["rouge2"]
-                results["rougeL"][suffix] = metrics["rougeLsum"]
+                results["rouge1"][suffix] = metrics["eval_rouge1"]
+                results["rouge2"][suffix] = metrics["eval_rouge2"]
+                results["rougeL"][suffix] = metrics["eval_rougeLsum"]
 
     return results
 
